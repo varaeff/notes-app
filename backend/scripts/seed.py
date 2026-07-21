@@ -1,10 +1,13 @@
-"""Seed a demo user with a few notes. Idempotent: wipes the demo user before inserting."""
+"""
+Seed a demo user with a few notes.
+Idempotent: removes the existing demo user before inserting fresh data.
+"""
 
 from datetime import date, timedelta
 
 from app.auth import hash_password
 from app.db import SessionLocal
-from app.models import Note, User
+from app.models import Note, TelegramSettings, User
 
 DEMO_USERNAME = "demo"
 DEMO_PASSWORD = "demo1234"
@@ -12,6 +15,7 @@ DEMO_PASSWORD = "demo1234"
 
 def seed() -> None:
     db = SessionLocal()
+
     try:
         existing = db.query(User).filter(User.username == DEMO_USERNAME).one_or_none()
         if existing:
@@ -22,7 +26,15 @@ def seed() -> None:
         db.add(user)
         db.flush()
 
+        telegram_settings = TelegramSettings(
+            user_id=user.id,
+            notifications_enabled=False,
+            timezone="UTC",
+        )
+        db.add(telegram_settings)
+
         today = date.today()
+
         notes: list[Note] = [
             Note(
                 user_id=user.id,
@@ -55,7 +67,11 @@ def seed() -> None:
         ]
         db.add_all(notes)
         db.commit()
+
         print(f"Seeded '{DEMO_USERNAME}' / '{DEMO_PASSWORD}' with {len(notes)} notes.")
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 
