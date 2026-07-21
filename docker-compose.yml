@@ -15,7 +15,7 @@ services:
       timeout: 3s
       retries: 20
 
-  backend:
+  migrations:
     build: ./backend
     depends_on:
       db:
@@ -23,13 +23,46 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/notes
       JWT_SECRET: dev-secret-change-me-please-32bytes
+    volumes:
+      - ./backend:/app
+    command: alembic upgrade head
+    restart: "no"
+
+  backend:
+    build: ./backend
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/notes
+      JWT_SECRET: dev-secret-change-me-please-32bytes
       CORS_ORIGINS: http://localhost:5173
+    env_file:
+      - ./backend/.env
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
     command: >
-      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+
+  telegram-bot:
+    build: ./backend
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/notes
+      JWT_SECRET: dev-secret-change-me-please-32bytes
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    command: python -m app.bot.main
+    restart: unless-stopped
 
   frontend:
     build: ./frontend

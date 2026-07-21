@@ -308,23 +308,28 @@
         "title": "OkOut",
         "type": "object"
       },
-      "TelegramLinkResponse": {
+      "TelegramLinkCodeResponse": {
         "properties": {
+          "bot_username": {
+            "title": "Bot Username",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
           "expires_at": {
             "format": "date-time",
             "title": "Expires At",
             "type": "string"
-          },
-          "url": {
-            "title": "Url",
-            "type": "string"
           }
         },
         "required": [
-          "url",
-          "expires_at"
+          "code",
+          "expires_at",
+          "bot_username"
         ],
-        "title": "TelegramLinkResponse",
+        "title": "TelegramLinkCodeResponse",
         "type": "object"
       },
       "TelegramSettingsResponse": {
@@ -1374,15 +1379,17 @@
         "tags": [
           "telegram-settings"
         ]
-      },
+      }
+    },
+    "/api/settings/telegram/link-code": {
       "post": {
-        "operationId": "create_telegram_link_api_settings_telegram_link_post",
+        "operationId": "create_telegram_link_code_endpoint_api_settings_telegram_link_code_post",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TelegramLinkResponse"
+                  "$ref": "#/components/schemas/TelegramLinkCodeResponse"
                 }
               }
             },
@@ -1394,7 +1401,7 @@
             "OAuth2PasswordBearer": []
           }
         ],
-        "summary": "Create Telegram Link",
+        "summary": "Create Telegram Link Code Endpoint",
         "tags": [
           "telegram-settings"
         ]

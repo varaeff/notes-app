@@ -113,13 +113,13 @@ class TelegramSettings(Base):
         server_default="UTC",
     )
 
-    link_token: Mapped[str | None] = mapped_column(
-        String(128),
+    link_code: Mapped[str | None] = mapped_column(
+        String(6),
         nullable=True,
         unique=True,
     )
 
-    link_token_expires_at: Mapped[datetime | None] = mapped_column(
+    link_code_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )

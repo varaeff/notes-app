@@ -94,12 +94,7 @@ class TelegramSettingsUpdate(BaseModel):
         return value
 
 
-class TelegramLinkResponse(BaseModel):
-    url: str
+class TelegramLinkCodeResponse(BaseModel):
+    code: str
     expires_at: datetime
-
-
-class TelegramLinkCompleteRequest(BaseModel):
-    token: str = Field(min_length=32, max_length=128)
-    chat_id: int
-    username: str | None = Field(default=None, max_length=64)
+    bot_username: str

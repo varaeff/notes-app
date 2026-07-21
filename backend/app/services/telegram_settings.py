@@ -1,10 +1,29 @@
-from datetime import UTC, datetime
+import secrets
+from datetime import UTC, datetime, timedelta
 
-from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.models import TelegramSettings, User
 from app.schemas import TelegramSettingsResponse
+
+
+class TelegramLinkError(Exception):
+    pass
+
+
+class TelegramLinkCodeNotFoundError(TelegramLinkError):
+    pass
+
+
+class TelegramLinkCodeExpiredError(TelegramLinkError):
+    pass
+
+
+class TelegramChatAlreadyLinkedError(TelegramLinkError):
+    pass
 
 
 def get_or_create_telegram_settings(
@@ -18,16 +37,20 @@ def get_or_create_telegram_settings(
     if telegram_settings is not None:
         return telegram_settings
 
-    telegram_settings = TelegramSettings(
-        user_id=user.id,
-        notifications_enabled=False,
-        timezone="UTC",
-    )
+    try:
+        telegram_settings = TelegramSettings(
+            user_id=user.id,
+            notifications_enabled=False,
+            timezone="UTC",
+        )
 
-    db.add(telegram_settings)
-    db.flush()
+        db.add(telegram_settings)
+        db.flush()
 
-    return telegram_settings
+        return telegram_settings
+    except IntegrityError:
+        db.rollback()
+        return db.query(TelegramSettings).filter(TelegramSettings.user_id == user.id).one()
 
 
 def build_telegram_settings_response(
@@ -41,38 +64,73 @@ def build_telegram_settings_response(
     )
 
 
-def complete_telegram_link(
+def generate_telegram_link_code() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def generate_unique_telegram_link_code(db: Session) -> str:
+    for _ in range(10):
+        code = generate_telegram_link_code()
+        existing = db.scalar(select(TelegramSettings.id).where(TelegramSettings.link_code == code))
+
+        if existing is None:
+            return code
+
+    raise RuntimeError("Could not generate a unique Telegram link code")
+
+
+def create_telegram_link_code(
+    db: Session,
+    user: User,
+) -> TelegramSettings:
+    for _ in range(10):
+        telegram_settings = get_or_create_telegram_settings(db, user)
+        telegram_settings.link_code = generate_unique_telegram_link_code(db)
+        telegram_settings.link_code_expires_at = datetime.now(UTC) + timedelta(
+            minutes=settings.telegram_link_code_ttl_minutes
+        )
+
+        try:
+            db.commit()
+            db.refresh(telegram_settings)
+            return telegram_settings
+        except IntegrityError:
+            db.rollback()
+
+    raise RuntimeError("Could not create a unique Telegram link code")
+
+
+def _normalize_utc(value: datetime | None) -> datetime | None:
+    if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+        return value.replace(tzinfo=UTC)
+
+    return value
+
+
+def connect_telegram_by_code(
     db: Session,
     *,
-    token: str,
+    code: str,
     chat_id: int,
     username: str | None,
 ) -> TelegramSettings:
     now = datetime.now(UTC)
 
     telegram_settings = (
-        db.query(TelegramSettings).filter(TelegramSettings.link_token == token).one_or_none()
+        db.query(TelegramSettings).filter(TelegramSettings.link_code == code).one_or_none()
     )
 
     if telegram_settings is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Telegram link token not found",
-        )
+        raise TelegramLinkCodeNotFoundError
 
-    expires_at = telegram_settings.link_token_expires_at
-    if expires_at is not None and (expires_at.tzinfo is None or expires_at.utcoffset() is None):
-        expires_at = expires_at.replace(tzinfo=UTC)
+    expires_at = _normalize_utc(telegram_settings.link_code_expires_at)
 
     if expires_at is None or expires_at <= now:
-        telegram_settings.link_token = None
-        telegram_settings.link_token_expires_at = None
+        telegram_settings.link_code = None
+        telegram_settings.link_code_expires_at = None
         db.commit()
 
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="Telegram link token has expired",
-        )
+        raise TelegramLinkCodeExpiredError
 
     existing_chat = (
         db.query(TelegramSettings)
@@ -84,15 +142,34 @@ def complete_telegram_link(
     )
 
     if existing_chat is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Telegram account is already linked to another user",
-        )
+        raise TelegramChatAlreadyLinkedError
 
-    telegram_settings.chat_id = chat_id
-    telegram_settings.username = username
-    telegram_settings.link_token = None
-    telegram_settings.link_token_expires_at = None
+    try:
+        telegram_settings.chat_id = chat_id
+        telegram_settings.username = username
+        telegram_settings.link_code = None
+        telegram_settings.link_code_expires_at = None
+
+        db.commit()
+        db.refresh(telegram_settings)
+
+        return telegram_settings
+    except Exception:
+        db.rollback()
+        raise
+
+
+def disconnect_telegram(
+    db: Session,
+    user: User,
+) -> TelegramSettings:
+    telegram_settings = get_or_create_telegram_settings(db, user)
+
+    telegram_settings.chat_id = None
+    telegram_settings.username = None
+    telegram_settings.notifications_enabled = False
+    telegram_settings.link_code = None
+    telegram_settings.link_code_expires_at = None
 
     db.commit()
     db.refresh(telegram_settings)

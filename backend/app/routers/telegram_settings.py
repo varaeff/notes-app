@@ -1,15 +1,16 @@
-import secrets
-from datetime import UTC, datetime, timedelta
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import User
-from app.schemas import TelegramLinkResponse, TelegramSettingsResponse, TelegramSettingsUpdate
+from app.schemas import TelegramLinkCodeResponse, TelegramSettingsResponse, TelegramSettingsUpdate
 from app.services.telegram_settings import (
     build_telegram_settings_response,
+    create_telegram_link_code,
     get_or_create_telegram_settings,
+)
+from app.services.telegram_settings import (
+    disconnect_telegram as disconnect_telegram_settings,
 )
 
 from ..deps import get_current_user, get_db
@@ -43,10 +44,7 @@ def update_telegram_settings(
 
     update_data = payload.model_dump(exclude_unset=True)
 
-    if (
-        update_data.get("notifications_enabled") is True
-        and telegram_settings.chat_id is None
-    ):
+    if update_data.get("notifications_enabled") is True and telegram_settings.chat_id is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Telegram account is not connected",
@@ -61,37 +59,29 @@ def update_telegram_settings(
     return build_telegram_settings_response(telegram_settings)
 
 
-@router.post("/link", response_model=TelegramLinkResponse)
-def create_telegram_link(
+@router.post("/link-code", response_model=TelegramLinkCodeResponse)
+def create_telegram_link_code_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> TelegramLinkResponse:
+) -> TelegramLinkCodeResponse:
     if not settings.telegram_bot_username:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Telegram integration is not configured",
         )
 
-    telegram_settings = get_or_create_telegram_settings(db, current_user)
+    telegram_settings = create_telegram_link_code(db, current_user)
 
-    token = secrets.token_urlsafe(32)
-    expires_at = datetime.now(UTC) + timedelta(
-        minutes=settings.telegram_link_token_ttl_minutes
-    )
+    if telegram_settings.link_code is None or telegram_settings.link_code_expires_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Telegram link code was not created",
+        )
 
-    telegram_settings.link_token = token
-    telegram_settings.link_token_expires_at = expires_at
-
-    db.commit()
-
-    url = (
-        f"https://t.me/{settings.telegram_bot_username}"
-        f"?start={token}"
-    )
-
-    return TelegramLinkResponse(
-        url=url,
-        expires_at=expires_at,
+    return TelegramLinkCodeResponse(
+        code=telegram_settings.link_code,
+        expires_at=telegram_settings.link_code_expires_at,
+        bot_username=settings.telegram_bot_username,
     )
 
 
@@ -100,15 +90,6 @@ def disconnect_telegram(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> TelegramSettingsResponse:
-    telegram_settings = get_or_create_telegram_settings(db, current_user)
-
-    telegram_settings.chat_id = None
-    telegram_settings.username = None
-    telegram_settings.notifications_enabled = False
-    telegram_settings.link_token = None
-    telegram_settings.link_token_expires_at = None
-
-    db.commit()
-    db.refresh(telegram_settings)
+    telegram_settings = disconnect_telegram_settings(db, current_user)
 
     return build_telegram_settings_response(telegram_settings)
