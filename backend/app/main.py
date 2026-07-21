@@ -6,6 +6,7 @@ from .routers import account as account_router
 from .routers import auth as auth_router
 from .routers import notes as notes_router
 from .routers import tags as tags_router
+from .routers import telegram_settings as telegram_settings_router
 
 app = FastAPI(title="Notes API", version="0.1.0")
 
@@ -28,3 +29,4 @@ app.include_router(auth_router.router, prefix="/api")
 app.include_router(account_router.router, prefix="/api")
 app.include_router(notes_router.router, prefix="/api")
 app.include_router(tags_router.router, prefix="/api")
+app.include_router(telegram_settings_router.router, prefix="/api")

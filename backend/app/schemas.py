@@ -1,6 +1,7 @@
 from datetime import date, datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class UserCreate(BaseModel):
@@ -66,3 +67,39 @@ class DeleteAccountIn(BaseModel):
 
 class OkOut(BaseModel):
     ok: bool = True
+
+
+class TelegramSettingsResponse(BaseModel):
+    is_connected: bool
+    username: str | None
+    notifications_enabled: bool
+    timezone: str
+
+
+class TelegramSettingsUpdate(BaseModel):
+    notifications_enabled: bool | None = None
+    timezone: str | None = Field(default=None, max_length=64)
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        try:
+            ZoneInfo(value)
+        except ZoneInfoNotFoundError as error:
+            raise ValueError("Invalid IANA timezone") from error
+
+        return value
+
+
+class TelegramLinkResponse(BaseModel):
+    url: str
+    expires_at: datetime
+
+
+class TelegramLinkCompleteRequest(BaseModel):
+    token: str = Field(min_length=32, max_length=128)
+    chat_id: int
+    username: str | None = Field(default=None, max_length=64)
