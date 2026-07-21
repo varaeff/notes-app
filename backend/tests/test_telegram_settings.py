@@ -1,15 +1,23 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app import deps
 from app.auth import hash_password
 from app.bot.handlers import link_code_handler, start_handler
 from app.config import settings
 from app.db import Base
+from app.main import app
 from app.models import TelegramSettings, User
+from app.services.telegram_notifications import (
+    TelegramChatUnavailableError,
+    TelegramDeliveryError,
+    TelegramNotConfiguredError,
+)
 from app.services.telegram_settings import (
     TelegramChatAlreadyLinkedError,
     TelegramLinkCodeExpiredError,
@@ -101,6 +109,46 @@ def _create_telegram_settings(
     db.add(telegram_settings)
     db.commit()
     return telegram_settings
+
+
+def _override_db_session():
+    override_get_db = app.dependency_overrides[deps.get_db]
+    db_context = override_get_db()
+    return next(db_context), db_context
+
+
+def _close_override_db_session(db_context) -> None:
+    try:
+        next(db_context)
+    except StopIteration:
+        return
+
+
+def _connect_authenticated_user(
+    client,
+    *,
+    username: str = "telegram-user",
+    chat_id: int = 123456789,
+):
+    headers = _auth(client, username=username)
+    db, db_context = _override_db_session()
+
+    try:
+        user = db.query(User).filter(User.username == username).one()
+        telegram_settings = TelegramSettings(
+            user_id=user.id,
+            chat_id=chat_id,
+            username="test_user",
+            notifications_enabled=True,
+            timezone="UTC",
+        )
+        db.add(telegram_settings)
+        db.commit()
+    finally:
+        db.close()
+        _close_override_db_session(db_context)
+
+    return headers
 
 
 def test_get_telegram_settings_returns_defaults(client):
@@ -367,3 +415,89 @@ def test_bot_link_code_handler_rejects_invalid_text():
     asyncio.run(link_code_handler(update, TelegramContextStub()))
 
     assert message.replies == ["Enter the six-digit connection code from the notes application."]
+
+
+def test_send_test_telegram_notification(client):
+    headers = _connect_authenticated_user(client)
+
+    with patch(
+        "app.routers.telegram_settings.send_test_telegram_message",
+        new_callable=AsyncMock,
+    ) as send_mock:
+        response = client.post(
+            "/api/settings/telegram/test",
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "success": True,
+        "message": "Test notification sent",
+    }
+    send_mock.assert_awaited_once_with(
+        telegram_chat_id=123456789,
+    )
+
+
+def test_send_test_telegram_notification_requires_connection(client):
+    response = client.post(
+        "/api/settings/telegram/test",
+        headers=_auth(client),
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Telegram account is not connected"
+
+
+def test_send_test_telegram_notification_reports_unavailable_chat(client):
+    headers = _connect_authenticated_user(client)
+
+    with patch(
+        "app.routers.telegram_settings.send_test_telegram_message",
+        new_callable=AsyncMock,
+        side_effect=TelegramChatUnavailableError,
+    ):
+        response = client.post(
+            "/api/settings/telegram/test",
+            headers=headers,
+        )
+
+    assert response.status_code == 409
+    assert (
+        response.json()["detail"]
+        == "Telegram chat is unavailable. Reconnect your Telegram account."
+    )
+
+
+def test_send_test_telegram_notification_reports_delivery_failure(client):
+    headers = _connect_authenticated_user(client)
+
+    with patch(
+        "app.routers.telegram_settings.send_test_telegram_message",
+        new_callable=AsyncMock,
+        side_effect=TelegramDeliveryError,
+    ):
+        response = client.post(
+            "/api/settings/telegram/test",
+            headers=headers,
+        )
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "Failed to deliver Telegram notification"
+
+
+def test_send_test_telegram_notification_reports_missing_bot_token(client):
+    headers = _connect_authenticated_user(client)
+
+    with patch(
+        "app.routers.telegram_settings.send_test_telegram_message",
+        new_callable=AsyncMock,
+        side_effect=TelegramNotConfiguredError,
+    ):
+        response = client.post(
+            "/api/settings/telegram/test",
+            headers=headers,
+        )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Telegram integration is not configured"

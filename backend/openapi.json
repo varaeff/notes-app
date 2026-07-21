@@ -396,6 +396,24 @@
         "title": "TelegramSettingsUpdate",
         "type": "object"
       },
+      "TelegramTestMessageResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "TelegramTestMessageResponse",
+        "type": "object"
+      },
       "TokenOut": {
         "properties": {
           "access_token": {
@@ -1402,6 +1420,32 @@
           }
         ],
         "summary": "Create Telegram Link Code Endpoint",
+        "tags": [
+          "telegram-settings"
+        ]
+      }
+    },
+    "/api/settings/telegram/test": {
+      "post": {
+        "operationId": "send_test_notification_api_settings_telegram_test_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramTestMessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Send Test Notification",
         "tags": [
           "telegram-settings"
         ]

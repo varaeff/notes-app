@@ -3,7 +3,19 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import User
-from app.schemas import TelegramLinkCodeResponse, TelegramSettingsResponse, TelegramSettingsUpdate
+from app.schemas import (
+    TelegramLinkCodeResponse,
+    TelegramSettingsResponse,
+    TelegramSettingsUpdate,
+    TelegramTestMessageResponse,
+)
+from app.services.telegram_notifications import (
+    TelegramChatUnavailableError,
+    TelegramDeliveryError,
+    TelegramNotConfiguredError,
+    TelegramNotConnectedError,
+    send_test_telegram_message,
+)
 from app.services.telegram_settings import (
     build_telegram_settings_response,
     create_telegram_link_code,
@@ -82,6 +94,48 @@ def create_telegram_link_code_endpoint(
         code=telegram_settings.link_code,
         expires_at=telegram_settings.link_code_expires_at,
         bot_username=settings.telegram_bot_username,
+    )
+
+
+@router.post(
+    "/test",
+    response_model=TelegramTestMessageResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def send_test_notification(
+    current_user: User = Depends(get_current_user),
+) -> TelegramTestMessageResponse:
+    telegram_settings = current_user.telegram_settings
+    telegram_chat_id = telegram_settings.chat_id if telegram_settings is not None else None
+
+    try:
+        await send_test_telegram_message(
+            telegram_chat_id=telegram_chat_id,
+        )
+    except TelegramNotConnectedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Telegram account is not connected",
+        ) from exc
+    except TelegramChatUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Telegram chat is unavailable. Reconnect your Telegram account.",
+        ) from exc
+    except TelegramNotConfiguredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Telegram integration is not configured",
+        ) from exc
+    except TelegramDeliveryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to deliver Telegram notification",
+        ) from exc
+
+    return TelegramTestMessageResponse(
+        success=True,
+        message="Test notification sent",
     )
 
 

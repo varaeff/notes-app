@@ -98,3 +98,8 @@ class TelegramLinkCodeResponse(BaseModel):
     code: str
     expires_at: datetime
     bot_username: str
+
+
+class TelegramTestMessageResponse(BaseModel):
+    success: bool
+    message: str

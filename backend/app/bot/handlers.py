@@ -11,15 +11,17 @@ from app.services.telegram_settings import (
     connect_telegram_by_code,
 )
 
-logger = logging.getLogger(__name__)
+from .messages import (
+    TELEGRAM_CHAT_ALREADY_LINKED,
+    TELEGRAM_CODE_EXPIRED,
+    TELEGRAM_CODE_NOT_FOUND,
+    TELEGRAM_CODE_PROMPT,
+    TELEGRAM_CONNECT_FAILED,
+    TELEGRAM_CONNECT_SUCCESS,
+    TELEGRAM_INVALID_CODE,
+)
 
-_CODE_PROMPT = "Send the six-digit connection code shown in the notes application."
-_INVALID_CODE = "Enter the six-digit connection code from the notes application."
-_CODE_NOT_FOUND = "The connection code is invalid or has already been used."
-_CODE_EXPIRED = "The connection code has expired. Generate a new code in the notes application."
-_CHAT_ALREADY_LINKED = "This Telegram account is already connected to another application user."
-_CONNECT_FAILED = "Could not connect Telegram. Try again later."
-_CONNECT_SUCCESS = "Telegram has been connected successfully."
+logger = logging.getLogger(__name__)
 
 
 def _telegram_username(telegram_user: User | None) -> str | None:
@@ -36,7 +38,7 @@ async def _connect_from_code(
     code: str,
 ) -> None:
     if len(code) != 6 or not code.isdigit():
-        await message.reply_text(_INVALID_CODE)
+        await message.reply_text(TELEGRAM_INVALID_CODE)
         return
 
     db = SessionLocal()
@@ -49,17 +51,17 @@ async def _connect_from_code(
             username=_telegram_username(telegram_user),
         )
     except TelegramLinkCodeNotFoundError:
-        await message.reply_text(_CODE_NOT_FOUND)
+        await message.reply_text(TELEGRAM_CODE_NOT_FOUND)
     except TelegramLinkCodeExpiredError:
-        await message.reply_text(_CODE_EXPIRED)
+        await message.reply_text(TELEGRAM_CODE_EXPIRED)
     except TelegramChatAlreadyLinkedError:
-        await message.reply_text(_CHAT_ALREADY_LINKED)
+        await message.reply_text(TELEGRAM_CHAT_ALREADY_LINKED)
     except Exception:
         db.rollback()
         logger.exception("Failed to connect Telegram account")
-        await message.reply_text(_CONNECT_FAILED)
+        await message.reply_text(TELEGRAM_CONNECT_FAILED)
     else:
-        await message.reply_text(_CONNECT_SUCCESS)
+        await message.reply_text(TELEGRAM_CONNECT_SUCCESS)
     finally:
         db.close()
 
@@ -84,7 +86,7 @@ async def start_handler(
         )
         return
 
-    await message.reply_text(_CODE_PROMPT)
+    await message.reply_text(TELEGRAM_CODE_PROMPT)
 
 
 async def link_code_handler(
