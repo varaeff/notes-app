@@ -976,6 +976,98 @@ kbd {
   font-size: 0.88rem;
   border: 1px solid rgba(18, 185, 129, 0.2);
 }
+.telegram-settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.telegram-settings-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.telegram-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.telegram-status.connected {
+  border-color: rgba(18, 185, 129, 0.35);
+  color: var(--success);
+  background: rgba(18, 185, 129, 0.1);
+}
+.telegram-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.telegram-panel.muted {
+  color: var(--text-muted);
+}
+.telegram-panel p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.telegram-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.telegram-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.telegram-code {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.45rem;
+  letter-spacing: 0;
+}
+.telegram-meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.telegram-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+.telegram-connected-actions {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.telegram-connected-actions .btn {
+  white-space: nowrap;
+}
+.telegram-preferences {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.telegram-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.55rem !important;
+}
+.telegram-checkbox input {
+  width: auto;
+}
 
 /* ============================== Responsive ============================== */
 @media (max-width: 820px) {
@@ -985,4 +1077,7 @@ kbd {
   }
   main { padding: 1rem; }
   .theme-label, .lang-label { display: none; }
+  .telegram-connected-actions {
+    flex-wrap: wrap;
+  }
 }

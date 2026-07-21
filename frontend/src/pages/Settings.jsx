@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { clearToken } from '../auth.js';
+import TelegramSettingsCard from '../components/TelegramSettingsCard.jsx';
 import { useLang } from '../i18n.jsx';
 
 export default function Settings() {
@@ -46,6 +47,8 @@ export default function Settings() {
   return (
     <div className="settings-page">
       <h1>{t('settings.title')}</h1>
+
+      <TelegramSettingsCard />
 
       <section className="settings-card">
         <h2>{t('settings.changePasswordTitle')}</h2>
