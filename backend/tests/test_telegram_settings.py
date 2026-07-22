@@ -155,7 +155,10 @@ def _connect_authenticated_user(
     return headers
 
 
-def test_get_telegram_settings_returns_defaults(client):
+def test_get_telegram_settings_returns_defaults(client, monkeypatch):
+    monkeypatch.setattr(settings, "telegram_bot_token", None)
+    monkeypatch.setattr(settings, "telegram_bot_username", None)
+
     response = client.get(
         "/api/settings/telegram",
         headers=_auth(client),
@@ -163,12 +166,26 @@ def test_get_telegram_settings_returns_defaults(client):
 
     assert response.status_code == 200
     assert response.json() == {
+        "is_configured": False,
         "is_connected": False,
         "username": None,
         "notifications_enabled": False,
         "timezone": "UTC",
         "reminder_time": "09:00",
     }
+
+
+def test_get_telegram_settings_reports_configured_integration(client, monkeypatch):
+    monkeypatch.setattr(settings, "telegram_bot_token", "test-token")
+    monkeypatch.setattr(settings, "telegram_bot_username", "test_notes_bot")
+
+    response = client.get(
+        "/api/settings/telegram",
+        headers=_auth(client),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["is_configured"] is True
 
 
 def test_update_telegram_timezone(client):
@@ -231,6 +248,24 @@ def test_cannot_enable_notifications_without_connection(client):
     )
 
     assert response.status_code == 409
+
+
+def test_update_telegram_notifications_syncs_reminder_worker(client, monkeypatch):
+    headers = _connect_authenticated_user(client)
+    sync_mock = AsyncMock()
+    monkeypatch.setattr(
+        "app.routers.telegram_settings.reminder_worker_manager.sync",
+        sync_mock,
+    )
+
+    response = client.patch(
+        "/api/settings/telegram",
+        headers=headers,
+        json={"notifications_enabled": True},
+    )
+
+    assert response.status_code == 200
+    sync_mock.assert_awaited_once()
 
 
 def test_create_link_code_returns_six_digit_code(client, monkeypatch):
@@ -547,3 +582,22 @@ def test_send_test_telegram_notification_reports_missing_bot_token(client):
 
     assert response.status_code == 503
     assert response.json()["detail"] == "Telegram integration is not configured"
+
+
+def test_disconnect_telegram_syncs_reminder_worker(client, monkeypatch):
+    headers = _connect_authenticated_user(client)
+    sync_mock = AsyncMock()
+    monkeypatch.setattr(
+        "app.routers.telegram_settings.reminder_worker_manager.sync",
+        sync_mock,
+    )
+
+    response = client.delete(
+        "/api/settings/telegram/link",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["is_connected"] is False
+    assert response.json()["notifications_enabled"] is False
+    sync_mock.assert_awaited_once()

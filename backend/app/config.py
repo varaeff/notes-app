@@ -21,7 +21,6 @@ class Settings(BaseSettings):
     telegram_bot_token: str | None = None
     telegram_bot_username: str | None = None
     telegram_link_code_ttl_minutes: int = 15
-    telegram_internal_secret: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

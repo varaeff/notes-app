@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class TelegramSettingsResponse(BaseModel):
+    is_configured: bool
     is_connected: bool
     username: str | None
     notifications_enabled: bool

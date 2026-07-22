@@ -1021,6 +1021,9 @@ kbd {
   font-size: 0.9rem;
   line-height: 1.5;
 }
+.telegram-connect-button {
+  align-self: flex-start;
+}
 .telegram-code-row {
   display: flex;
   align-items: center;

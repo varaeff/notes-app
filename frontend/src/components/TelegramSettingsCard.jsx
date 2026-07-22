@@ -47,6 +47,10 @@ export default function TelegramSettingsCard() {
     setReminderTime,
   } = telegramSettings;
 
+  if (settings?.is_configured === false) {
+    return null;
+  }
+
   return (
     <section className="settings-card telegram-settings-card">
       <TelegramSettingsHeader

@@ -59,6 +59,7 @@ def build_telegram_settings_response(
     telegram_settings: TelegramSettings,
 ) -> TelegramSettingsResponse:
     return TelegramSettingsResponse(
+        is_configured=bool(settings.telegram_bot_token and settings.telegram_bot_username),
         is_connected=telegram_settings.chat_id is not None,
         username=telegram_settings.username,
         notifications_enabled=telegram_settings.notifications_enabled,

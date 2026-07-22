@@ -15,6 +15,7 @@ function jsonResponse(body, status = 200) {
 
 function telegramSettings(overrides = {}) {
   return {
+    is_configured: true,
     is_connected: false,
     username: null,
     notifications_enabled: false,
@@ -92,7 +93,20 @@ describe('TelegramSettingsCard', () => {
 
     expect(screen.getByText('Loading Telegram settings...')).toBeInTheDocument();
     expect(await screen.findByText('Telegram is not connected yet.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Connect Telegram' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect Telegram' })).toHaveClass(
+      'telegram-connect-button'
+    );
+  });
+
+  it('hides Telegram settings when integration is not configured', async () => {
+    mockFetchQueue([{ body: telegramSettings({ is_configured: false }) }]);
+
+    renderCard();
+
+    await waitFor(() => {
+      expect(screen.queryByText('Telegram reminders')).not.toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: 'Connect Telegram' })).not.toBeInTheDocument();
   });
 
   it('shows generated code and connection controls', async () => {

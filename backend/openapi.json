@@ -334,6 +334,10 @@
       },
       "TelegramSettingsResponse": {
         "properties": {
+          "is_configured": {
+            "title": "Is Configured",
+            "type": "boolean"
+          },
           "is_connected": {
             "title": "Is Connected",
             "type": "boolean"
@@ -363,6 +367,7 @@
           }
         },
         "required": [
+          "is_configured",
           "is_connected",
           "username",
           "notifications_enabled",

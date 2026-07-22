@@ -44,7 +44,7 @@ export function TelegramDisconnectedPanel({ t, isGenerating, onGenerateCode }) {
     <div className="telegram-panel">
       <p>{t("settings.telegram.disconnectedHint")}</p>
       <button
-        className="btn btn-primary"
+        className="btn btn-primary telegram-connect-button"
         type="button"
         onClick={onGenerateCode}
         disabled={isGenerating}

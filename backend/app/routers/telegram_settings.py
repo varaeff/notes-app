@@ -24,6 +24,7 @@ from app.services.telegram_settings import (
 from app.services.telegram_settings import (
     disconnect_telegram as disconnect_telegram_settings,
 )
+from app.workers.reminder_worker import reminder_worker_manager
 
 from ..deps import get_current_user, get_db
 
@@ -47,7 +48,7 @@ def get_telegram_settings(
 
 
 @router.patch("", response_model=TelegramSettingsResponse)
-def update_telegram_settings(
+async def update_telegram_settings(
     payload: TelegramSettingsUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -67,6 +68,7 @@ def update_telegram_settings(
 
     db.commit()
     db.refresh(telegram_settings)
+    await reminder_worker_manager.sync()
 
     return build_telegram_settings_response(telegram_settings)
 
@@ -140,10 +142,11 @@ async def send_test_notification(
 
 
 @router.delete("/link", response_model=TelegramSettingsResponse)
-def disconnect_telegram(
+async def disconnect_telegram(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> TelegramSettingsResponse:
     telegram_settings = disconnect_telegram_settings(db, current_user)
+    await reminder_worker_manager.sync()
 
     return build_telegram_settings_response(telegram_settings)
