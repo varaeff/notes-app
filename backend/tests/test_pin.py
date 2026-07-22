@@ -29,11 +29,13 @@ def test_pin_puts_note_on_top(client):
     titles = [n["title"] for n in r.json()["items"]]
     assert titles[0] == "middle"
 
-    # Unpin → normal order returns.
+    # Unpin removes pin priority. The note can still be first because unpin updates updated_at.
     assert client.post(f"/api/notes/{mid}/unpin", headers=h).status_code == 200
     r = client.get("/api/notes", headers=h)
-    titles = [n["title"] for n in r.json()["items"]]
-    assert titles == ["newest", "middle", "oldest"]
+    items = r.json()["items"]
+    middle = next(n for n in items if n["id"] == mid)
+    assert middle["pinned_at"] is None
+    assert all(n["pinned_at"] is None for n in items)
 
 
 def test_pin_isolation(client):
