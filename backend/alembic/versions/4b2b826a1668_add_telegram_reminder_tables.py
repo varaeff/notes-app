@@ -49,11 +49,17 @@ def upgrade():
             server_default=sa.text("'UTC'"),
             nullable=False,
         ),
-        sa.Column("link_token", sa.String(length=128), nullable=True),
+        sa.Column("link_code", sa.String(length=6), nullable=True),
         sa.Column(
-            "link_token_expires_at",
+            "link_code_expires_at",
             sa.DateTime(timezone=True),
             nullable=True,
+        ),
+        sa.Column(
+            "reminder_time",
+            sa.Time(),
+            server_default=sa.text("'09:00:00'"),
+            nullable=False,
         ),
         sa.Column(
             "created_at",
@@ -74,7 +80,7 @@ def upgrade():
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("chat_id"),
-        sa.UniqueConstraint("link_token"),
+        sa.UniqueConstraint("link_code"),
     )
 
     op.create_index(
