@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import User
-from app.schemas import (
+from app.schemas_telegram import (
     TelegramLinkCodeResponse,
     TelegramSettingsResponse,
     TelegramSettingsUpdate,

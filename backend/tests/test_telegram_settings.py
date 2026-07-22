@@ -12,7 +12,8 @@ from app.bot.handlers import link_code_handler, start_handler
 from app.config import settings
 from app.db import Base
 from app.main import app
-from app.models import TelegramSettings, User
+from app.models import User
+from app.models_telegram import TelegramSettings
 from app.services.reminders import build_reminder_scheduled_for
 from app.services.telegram_notifications import (
     TelegramChatUnavailableError,

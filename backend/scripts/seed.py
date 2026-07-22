@@ -7,7 +7,8 @@ from datetime import date, time, timedelta
 
 from app.auth import hash_password
 from app.db import SessionLocal
-from app.models import Note, TelegramSettings, User
+from app.models import Note, User
+from app.models_telegram import TelegramSettings
 
 DEMO_USERNAME = "demo"
 DEMO_PASSWORD = "demo1234"

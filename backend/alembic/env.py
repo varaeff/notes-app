@@ -3,7 +3,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-from app import models  # noqa: F401 -- register models
+from app import models, models_telegram  # noqa: F401 -- register models
 from app.config import settings
 from app.db import Base
 

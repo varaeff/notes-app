@@ -6,8 +6,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import TelegramSettings, User
-from app.schemas import TelegramSettingsResponse
+from app.models import User
+from app.models_telegram import TelegramSettings
+from app.schemas_telegram import TelegramSettingsResponse
 
 
 class TelegramLinkError(Exception):
