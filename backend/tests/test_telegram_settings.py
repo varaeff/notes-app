@@ -1,5 +1,5 @@
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -13,6 +13,7 @@ from app.config import settings
 from app.db import Base
 from app.main import app
 from app.models import TelegramSettings, User
+from app.services.reminders import build_reminder_scheduled_for
 from app.services.telegram_notifications import (
     TelegramChatUnavailableError,
     TelegramDeliveryError,
@@ -103,6 +104,7 @@ def _create_telegram_settings(
         chat_id=chat_id,
         notifications_enabled=False,
         timezone="UTC",
+        reminder_time=time(9, 0),
         link_code=code,
         link_code_expires_at=expires_at or datetime.now(UTC) + timedelta(minutes=15),
     )
@@ -141,6 +143,7 @@ def _connect_authenticated_user(
             username="test_user",
             notifications_enabled=True,
             timezone="UTC",
+            reminder_time=time(9, 0),
         )
         db.add(telegram_settings)
         db.commit()
@@ -163,6 +166,7 @@ def test_get_telegram_settings_returns_defaults(client):
         "username": None,
         "notifications_enabled": False,
         "timezone": "UTC",
+        "reminder_time": "09:00",
     }
 
 
@@ -175,6 +179,47 @@ def test_update_telegram_timezone(client):
 
     assert response.status_code == 200
     assert response.json()["timezone"] == "Asia/Tbilisi"
+
+
+def test_update_telegram_reminder_time(client):
+    response = client.patch(
+        "/api/settings/telegram",
+        headers=_auth(client),
+        json={"reminder_time": "18:30"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["reminder_time"] == "18:30"
+
+
+def test_update_telegram_rejects_invalid_timezone(client):
+    response = client.patch(
+        "/api/settings/telegram",
+        headers=_auth(client),
+        json={"timezone": "Europe/Not-A-Timezone"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_telegram_rejects_invalid_reminder_time(client):
+    response = client.patch(
+        "/api/settings/telegram",
+        headers=_auth(client),
+        json={"reminder_time": "24:00"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_build_reminder_scheduled_for_uses_timezone_and_reminder_time():
+    scheduled_for = build_reminder_scheduled_for(
+        note_date=date(2026, 4, 10),
+        reminder_time=time(18, 30),
+        timezone="Asia/Tbilisi",
+    )
+
+    assert scheduled_for == datetime(2026, 4, 10, 14, 30, tzinfo=UTC)
 
 
 def test_cannot_enable_notifications_without_connection(client):

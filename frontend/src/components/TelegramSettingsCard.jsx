@@ -30,6 +30,10 @@ export default function TelegramSettingsCard() {
     isDisconnecting,
     notificationsEnabled,
     timezone,
+    reminderTime,
+    browserTimezone,
+    isUsingBrowserTimezone,
+    hasSavedTimezoneMismatch,
     loadSettings,
     generateCode,
     checkConnection,
@@ -40,6 +44,7 @@ export default function TelegramSettingsCard() {
     cancelConnection,
     setNotificationsEnabled,
     setTimezone,
+    setReminderTime,
   } = telegramSettings;
 
   return (
@@ -89,11 +94,16 @@ export default function TelegramSettingsCard() {
           settings={settings}
           notificationsEnabled={notificationsEnabled}
           timezone={timezone}
+          reminderTime={reminderTime}
+          browserTimezone={browserTimezone}
+          isUsingBrowserTimezone={isUsingBrowserTimezone}
+          hasSavedTimezoneMismatch={hasSavedTimezoneMismatch}
           isSaving={isSaving}
           isSendingTest={isSendingTest}
           isDisconnecting={isDisconnecting}
           onNotificationsEnabledChange={setNotificationsEnabled}
           onTimezoneChange={setTimezone}
+          onReminderTimeChange={setReminderTime}
           onSavePreferences={savePreferences}
           onSendTestNotification={sendTestNotification}
           onDisconnect={disconnect}

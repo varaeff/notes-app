@@ -19,6 +19,7 @@ function telegramSettings(overrides = {}) {
     username: null,
     notifications_enabled: false,
     timezone: 'UTC',
+    reminder_time: '09:00',
     ...overrides,
   };
 }
@@ -72,6 +73,9 @@ beforeEach(() => {
     value: { writeText: vi.fn(() => Promise.resolve()) },
   });
   window.confirm = vi.fn(() => true);
+  vi.spyOn(Intl, 'DateTimeFormat').mockReturnValue({
+    resolvedOptions: () => ({ timeZone: 'Asia/Tbilisi' }),
+  });
 });
 
 afterEach(() => {
@@ -213,7 +217,7 @@ describe('TelegramSettingsCard', () => {
     expect(screen.getByRole('button', { name: 'Connect Telegram' })).toBeInTheDocument();
   });
 
-  it('saves notification preferences and timezone', async () => {
+  it('shows browser timezone and saves notification preferences', async () => {
     const user = userEvent.setup();
     mockFetchQueue([
       { body: telegramSettings({ is_connected: true, username: 'alice' }) },
@@ -224,6 +228,7 @@ describe('TelegramSettingsCard', () => {
           expect(JSON.parse(options.body)).toEqual({
             notifications_enabled: true,
             timezone: 'Asia/Tbilisi',
+            reminder_time: '09:00',
           });
         },
         body: telegramSettings({
@@ -237,9 +242,50 @@ describe('TelegramSettingsCard', () => {
 
     renderCard();
 
+    expect(await screen.findByText('Current timezone')).toBeInTheDocument();
+    expect(screen.getByText('Saved manually')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Use browser timezone' }));
+
+    expect(screen.getAllByText('Asia/Tbilisi').length).toBeGreaterThan(0);
+    expect(screen.getByText('Detected by browser')).toBeInTheDocument();
+
     await user.click(await screen.findByLabelText('Enable reminder notifications'));
-    await user.clear(screen.getByLabelText('Timezone'));
-    await user.type(screen.getByLabelText('Timezone'), 'Asia/Tbilisi');
+    await user.click(screen.getByRole('button', { name: 'Save preferences' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Telegram preferences saved.')).toBeInTheDocument();
+    });
+  });
+
+  it('saves manually selected timezone and reminder time', async () => {
+    const user = userEvent.setup();
+    mockFetchQueue([
+      { body: telegramSettings({ is_connected: true, username: 'alice' }) },
+      {
+        assert: (url, options) => {
+          expect(url).toBe('/api/settings/telegram');
+          expect(options.method).toBe('PATCH');
+          expect(JSON.parse(options.body)).toEqual({
+            notifications_enabled: false,
+            timezone: 'America/New_York',
+            reminder_time: '18:30',
+          });
+        },
+        body: telegramSettings({
+          is_connected: true,
+          username: 'alice',
+          timezone: 'America/New_York',
+          reminder_time: '18:30',
+        }),
+      },
+    ]);
+
+    renderCard();
+
+    await user.selectOptions(await screen.findByLabelText('Change timezone'), 'America/New_York');
+    await user.clear(screen.getByLabelText('Reminder time'));
+    await user.type(screen.getByLabelText('Reminder time'), '18:30');
     await user.click(screen.getByRole('button', { name: 'Save preferences' }));
 
     await waitFor(() => {

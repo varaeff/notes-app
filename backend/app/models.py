@@ -1,5 +1,5 @@
 import enum
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from sqlalchemy import (
     JSON,
@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    Time,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -111,6 +112,13 @@ class TelegramSettings(Base):
         nullable=False,
         default="UTC",
         server_default="UTC",
+    )
+
+    reminder_time: Mapped[time] = mapped_column(
+        Time,
+        nullable=False,
+        default=time(9, 0),
+        server_default="09:00:00",
     )
 
     link_code: Mapped[str | None] = mapped_column(

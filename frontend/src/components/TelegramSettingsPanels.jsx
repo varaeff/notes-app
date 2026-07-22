@@ -1,4 +1,8 @@
-import { formatRemaining, getBotUrl } from "../utils/telegramSettings.js";
+import {
+  formatRemaining,
+  getBotUrl,
+  getTimezoneOptions,
+} from "../utils/telegramSettings.js";
 
 export function TelegramSettingsHeader({ t, isConnected }) {
   return (
@@ -135,15 +139,22 @@ export function TelegramConnectedPanel({
   settings,
   notificationsEnabled,
   timezone,
+  reminderTime,
+  browserTimezone,
+  isUsingBrowserTimezone,
+  hasSavedTimezoneMismatch,
   isSaving,
   isSendingTest,
   isDisconnecting,
   onNotificationsEnabledChange,
   onTimezoneChange,
+  onReminderTimeChange,
   onSavePreferences,
   onSendTestNotification,
   onDisconnect,
 }) {
+  const timezoneOptions = getTimezoneOptions(timezone, browserTimezone);
+
   return (
     <div className="telegram-panel">
       <p>
@@ -163,12 +174,47 @@ export function TelegramConnectedPanel({
           />
           {t("settings.telegram.notificationsEnabled")}
         </label>
-        <label>
-          {t("settings.telegram.timezone")}
+        <div className="telegram-timezone-row">
+          <div className="telegram-timezone-summary">
+            <span className="telegram-label">
+              {t("settings.telegram.currentTimezone")}
+            </span>
+            <strong>{timezone}</strong>
+            <span className="telegram-meta">
+              {isUsingBrowserTimezone
+                ? t("settings.telegram.detectedByBrowser")
+                : t("settings.telegram.savedManually")}
+            </span>
+          </div>
+          <label className="telegram-timezone-select">
+            {t("settings.telegram.changeTimezone")}
+            <select
+              value={timezone}
+              onChange={(event) => onTimezoneChange(event.target.value)}
+            >
+              {timezoneOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {browserTimezone && hasSavedTimezoneMismatch && (
+          <button
+            className="btn btn-ghost"
+            type="button"
+            onClick={() => onTimezoneChange(browserTimezone)}
+          >
+            {t("settings.telegram.useBrowserTimezone")}
+          </button>
+        )}
+        <label className="telegram-reminder-time">
+          {t("settings.telegram.reminderTime")}
           <input
-            value={timezone}
-            onChange={(event) => onTimezoneChange(event.target.value)}
-            placeholder="UTC"
+            type="time"
+            value={reminderTime}
+            onChange={(event) => onReminderTimeChange(event.target.value)}
           />
         </label>
         <div className="telegram-actions telegram-connected-actions">

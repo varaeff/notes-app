@@ -113,21 +113,26 @@ button:active { transform: translateY(1px); }
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
+select:focus-visible,
 a:focus-visible {
   outline: 3px solid var(--accent-ring);
   outline-offset: 1px;
 }
-input, textarea {
+input, textarea, select {
   font: inherit;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0.55rem 0.75rem;
+  min-height: 40px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
-input:hover, textarea:hover { border-color: var(--border-strong); }
-input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+select {
+  cursor: pointer;
+}
+input:hover, textarea:hover, select:hover { border-color: var(--border-strong); }
+input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
 ::placeholder { color: var(--text-subtle); }
 
 .app { min-height: 100%; display: flex; flex-direction: column; }
@@ -1043,6 +1048,43 @@ kbd {
   color: var(--text-muted);
   font-size: 0.85rem;
 }
+.telegram-timezone-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.telegram-timezone-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.telegram-timezone-select select {
+  appearance: none;
+  width: auto;
+  min-width: 12rem;
+  max-width: 100%;
+  padding-right: 2.25rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1rem) 50%,
+    calc(100% - 0.7rem) 50%;
+  background-size:
+    0.35rem 0.35rem,
+    0.35rem 0.35rem;
+  background-repeat: no-repeat;
+}
+.telegram-reminder-time {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.75rem !important;
+}
+.telegram-reminder-time input {
+  width: auto;
+}
 .telegram-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1079,5 +1121,8 @@ kbd {
   .theme-label, .lang-label { display: none; }
   .telegram-connected-actions {
     flex-wrap: wrap;
+  }
+  .telegram-timezone-row {
+    grid-template-columns: 1fr;
   }
 }

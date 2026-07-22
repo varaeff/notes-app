@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../api.js";
-import { secondsUntil } from "../utils/telegramSettings.js";
+import { getBrowserTimezone, secondsUntil } from "../utils/telegramSettings.js";
 
 const POLLING_DELAY_MS = 4000;
 
@@ -17,6 +17,8 @@ export function useTelegramSettingsCard(t) {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [timezone, setTimezone] = useState("UTC");
+  const [reminderTime, setReminderTime] = useState("09:00");
+  const [browserTimezone] = useState(() => getBrowserTimezone());
   const [error, setError] = useState(null);
   const [operationError, setOperationError] = useState(null);
   const [operationMessageKey, setOperationMessageKey] = useState(null);
@@ -66,6 +68,7 @@ export function useTelegramSettingsCard(t) {
 
     setNotificationsEnabled(settings.notifications_enabled);
     setTimezone(settings.timezone);
+    setReminderTime(settings.reminder_time || "09:00");
   }, [settings]);
 
   useEffect(() => {
@@ -211,6 +214,7 @@ export function useTelegramSettingsCard(t) {
       const nextSettings = await api.updateTelegramSettings({
         notifications_enabled: notificationsEnabled,
         timezone,
+        reminder_time: reminderTime,
       });
       setSettings(nextSettings);
       setOperationMessageKey("settings.telegram.preferencesSaved");
@@ -262,6 +266,10 @@ export function useTelegramSettingsCard(t) {
   };
 
   const isExpired = Boolean(linkCode) && remainingSeconds <= 0;
+  const isUsingBrowserTimezone = Boolean(browserTimezone) && timezone === browserTimezone;
+  const hasSavedTimezoneMismatch = Boolean(
+    browserTimezone && settings && settings.timezone !== browserTimezone && !isUsingBrowserTimezone,
+  );
 
   return {
     settings,
@@ -280,6 +288,10 @@ export function useTelegramSettingsCard(t) {
     isDisconnecting,
     notificationsEnabled,
     timezone,
+    reminderTime,
+    browserTimezone,
+    isUsingBrowserTimezone,
+    hasSavedTimezoneMismatch,
     loadSettings,
     generateCode,
     checkConnection,
@@ -290,5 +302,6 @@ export function useTelegramSettingsCard(t) {
     cancelConnection,
     setNotificationsEnabled,
     setTimezone,
+    setReminderTime,
   };
 }

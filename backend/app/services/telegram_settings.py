@@ -1,5 +1,5 @@
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -42,6 +42,7 @@ def get_or_create_telegram_settings(
             user_id=user.id,
             notifications_enabled=False,
             timezone="UTC",
+            reminder_time=time(9, 0),
         )
 
         db.add(telegram_settings)
@@ -61,6 +62,7 @@ def build_telegram_settings_response(
         username=telegram_settings.username,
         notifications_enabled=telegram_settings.notifications_enabled,
         timezone=telegram_settings.timezone,
+        reminder_time=telegram_settings.reminder_time.strftime("%H:%M"),
     )
 
 

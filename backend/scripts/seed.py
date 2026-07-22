@@ -3,7 +3,7 @@ Seed a demo user with a few notes.
 Idempotent: removes the existing demo user before inserting fresh data.
 """
 
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 
 from app.auth import hash_password
 from app.db import SessionLocal
@@ -30,6 +30,7 @@ def seed() -> None:
             user_id=user.id,
             notifications_enabled=False,
             timezone="UTC",
+            reminder_time=time(9, 0),
         )
         db.add(telegram_settings)
 

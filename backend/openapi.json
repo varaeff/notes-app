@@ -342,6 +342,10 @@
             "title": "Notifications Enabled",
             "type": "boolean"
           },
+          "reminder_time": {
+            "title": "Reminder Time",
+            "type": "string"
+          },
           "timezone": {
             "title": "Timezone",
             "type": "string"
@@ -362,7 +366,8 @@
           "is_connected",
           "username",
           "notifications_enabled",
-          "timezone"
+          "timezone",
+          "reminder_time"
         ],
         "title": "TelegramSettingsResponse",
         "type": "object"
@@ -379,6 +384,18 @@
               }
             ],
             "title": "Notifications Enabled"
+          },
+          "reminder_time": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminder Time"
           },
           "timezone": {
             "anyOf": [
